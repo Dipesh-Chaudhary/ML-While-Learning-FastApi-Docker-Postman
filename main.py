@@ -22,7 +22,9 @@ load_dotenv()  # Add this line
 
 # Initialize FastAPI
 app = FastAPI()
-
+@app.get("/")
+async def read_root():
+    return {"message": "Welcome to the Image Captioning and Response Generation API. Use the /predict endpoint to upload an image."}
 # Set your OpenAI API key (Free tier usage)
 openai.api_key = os.getenv("OPENAI_API_KEY")   # Replace with your OpenAI API key
 
@@ -73,6 +75,7 @@ def generate_response(caption, documents):
     )
     
     return response.choices[0].text.strip()
+
 
 # API endpoint for image processing and response generation
 @app.post("/predict", response_model=PredictionResponse)
