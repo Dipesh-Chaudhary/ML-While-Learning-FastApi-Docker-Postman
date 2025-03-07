@@ -14,6 +14,9 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from transformers import BlipProcessor
+
+from transformers import AutoTokenizer
+from transformers import GPTNeoForCausalLM 
 from transformers import BlipForConditionalGeneration
 
 from PIL import Image
@@ -28,9 +31,13 @@ app = FastAPI()
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to the Image Captioning and Response Generation API. Use the /predict endpoint to upload an image."}
-# Set your OpenAI API key (Free tier usage)
-openai.api_key = os.getenv("OPENAI_API_KEY")   # Replace with your OpenAI API key
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# # Set your OpenAI API key (Free tier usage)
+# openai.api_key = os.getenv("OPENAI_API_KEY")   # Replace with your OpenAI API key
+# client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+# Initialize GPT-Neo model (for text generation)
+gpt_neo_model = GPTNeoForCausalLM.from_pretrained("EleutherAI/gpt-neo-1.3B")
+gpt_neo_tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-neo-1.3B")
 
 # Initialize Hugging Face BLIP model (for image captioning)
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
@@ -67,19 +74,25 @@ def retrieve_documents(caption):
     
     return documents
 
-# Step 3: Use OpenAI GPT-3 for generating a detailed response
+
+# Step 3: Use GPT-Neo for generating a detailed response
 def generate_response(caption, documents):
     prompt = f"Caption: {caption}\n\nDocuments:\n" + "\n".join(documents) + "\n\nProvide a detailed answer based on the above information."
     
-    response = client.completions.create(
-        model="text-davinci-003",  # Use the GPT-3 model
-        prompt=prompt,
+    # Tokenize the input prompt
+    inputs = gpt_neo_tokenizer(prompt, return_tensors="pt", max_length=512, truncation=True)
+    
+    # Generate text using GPT-Neo
+    outputs = gpt_neo_model.generate(
+        inputs.input_ids,
+        max_length=500,
         temperature=0.7,
-        max_tokens=500,
+        num_return_sequences=1,
     )
     
-    return response.choices[0].text.strip()
-
+    # Decode the generated text
+    response = gpt_neo_tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return response
 
 # API endpoint for image processing and response generation
 @app.post("/predict", response_model=PredictionResponse)
@@ -95,7 +108,7 @@ async def predict(file: UploadFile = File(...)):
     # Step 2: Retrieve relevant documents
     documents = retrieve_documents(caption)
 
-    # Step 3: Generate a detailed response using GPT-3
+    # Step 3: Generate a detailed response using GPT-Neo
     response = generate_response(caption, documents)
 
     # Return the caption and the detailed response
