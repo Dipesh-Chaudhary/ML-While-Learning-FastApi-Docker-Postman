@@ -114,6 +114,6 @@ async def predict(file: UploadFile = File(...)):
     # Return the caption and the detailed response
     return PredictionResponse(caption=caption, response=response)
 #It is used since i have to access it through kaggle
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
