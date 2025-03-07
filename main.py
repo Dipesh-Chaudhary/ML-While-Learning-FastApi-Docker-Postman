@@ -8,6 +8,9 @@ from fastapi import File
 from fastapi import FastAPI
 from fastapi import UploadFile
 
+from openai import OpenAI
+
+
 from pydantic import BaseModel
 
 from transformers import BlipProcessor
@@ -27,6 +30,7 @@ async def read_root():
     return {"message": "Welcome to the Image Captioning and Response Generation API. Use the /predict endpoint to upload an image."}
 # Set your OpenAI API key (Free tier usage)
 openai.api_key = os.getenv("OPENAI_API_KEY")   # Replace with your OpenAI API key
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Initialize Hugging Face BLIP model (for image captioning)
 processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
@@ -46,7 +50,7 @@ def generate_caption(image_path):
     inputs = processor(raw_image, return_tensors="pt")
     out = model.generate(**inputs)
     caption = processor.decode(out[0], skip_special_tokens=True)
-    
+    print
     return caption
 
 # Step 2: Retrieve relevant documents (for RAG)
@@ -67,7 +71,7 @@ def retrieve_documents(caption):
 def generate_response(caption, documents):
     prompt = f"Caption: {caption}\n\nDocuments:\n" + "\n".join(documents) + "\n\nProvide a detailed answer based on the above information."
     
-    response = openai.Completion.create(
+    response = client.completions.create(
         model="text-davinci-003",  # Use the GPT-3 model
         prompt=prompt,
         temperature=0.7,
